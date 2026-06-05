@@ -65,4 +65,4 @@ export {
   startWhatsAppQaDriverSession,
   type WhatsAppQaDriverObservedMessage,
   type WhatsAppQaDriverSession,
-} from "./src/qa-driver.runtime.js";
+} from "./qa-driver-api.js";

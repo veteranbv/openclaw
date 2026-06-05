@@ -18,6 +18,7 @@ import {
 import {
   combineWhatsAppSendResults,
   normalizeWhatsAppSendResult,
+  type WhatsAppSendKind,
   type WhatsAppSendResult,
 } from "./send-result.js";
 import type { ActiveWebSendOptions } from "./types.js";
@@ -65,6 +66,16 @@ export function createWebSendApi(params: {
     params.resolveOutboundMentions
       ? await params.resolveOutboundMentions({ jid, text })
       : { text, mentionedJids: [] };
+  const sendStructuredMessage = async (
+    to: string,
+    content: AnyMessageContent,
+    kind: WhatsAppSendKind,
+  ): Promise<WhatsAppSendResult> => {
+    const jid = resolveOutboundJid(to);
+    const result = await params.sock.sendMessage(jid, content);
+    recordWhatsAppOutbound(params.defaultAccountId);
+    return normalizeWhatsAppSendResult(result, kind);
+  };
 
   return {
     sendMessage: async (
@@ -160,16 +171,73 @@ export function createWebSendApi(params: {
       to: string,
       poll: { question: string; options: string[]; maxSelections?: number },
     ): Promise<WhatsAppSendResult> => {
-      const jid = resolveOutboundJid(to);
-      const result = await params.sock.sendMessage(jid, {
-        poll: {
-          name: poll.question,
-          values: poll.options,
-          selectableCount: poll.maxSelections ?? 1,
-        },
-      } as AnyMessageContent);
-      recordWhatsAppOutbound(params.defaultAccountId);
-      return normalizeWhatsAppSendResult(result, "poll");
+      return await sendStructuredMessage(
+        to,
+        {
+          poll: {
+            name: poll.question,
+            values: poll.options,
+            selectableCount: poll.maxSelections ?? 1,
+          },
+        } as AnyMessageContent,
+        "poll",
+      );
+    },
+    sendContact: async (
+      to: string,
+      contact: { displayName: string; vcard: string },
+    ): Promise<WhatsAppSendResult> => {
+      return await sendStructuredMessage(
+        to,
+        {
+          contacts: {
+            displayName: contact.displayName,
+            contacts: [
+              {
+                displayName: contact.displayName,
+                vcard: contact.vcard,
+              },
+            ],
+          },
+        } as AnyMessageContent,
+        "contact",
+      );
+    },
+    sendLocation: async (
+      to: string,
+      location: {
+        address?: string;
+        degreesLatitude: number;
+        degreesLongitude: number;
+        name?: string;
+      },
+    ): Promise<WhatsAppSendResult> => {
+      return await sendStructuredMessage(
+        to,
+        {
+          location: {
+            degreesLatitude: location.degreesLatitude,
+            degreesLongitude: location.degreesLongitude,
+            name: location.name,
+            address: location.address,
+          },
+        } as AnyMessageContent,
+        "location",
+      );
+    },
+    sendSticker: async (
+      to: string,
+      stickerBuffer: Buffer,
+      options?: { mimetype?: string },
+    ): Promise<WhatsAppSendResult> => {
+      return await sendStructuredMessage(
+        to,
+        {
+          sticker: stickerBuffer,
+          mimetype: options?.mimetype ?? "image/webp",
+        } as AnyMessageContent,
+        "sticker",
+      );
     },
     sendReaction: async (
       chatJid: string,

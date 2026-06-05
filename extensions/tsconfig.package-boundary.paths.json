@@ -113,6 +113,9 @@
       "@openclaw/whatsapp/api.js": [
         "../dist/plugin-sdk/extensions/whatsapp/api.d.ts"
       ],
+      "@openclaw/whatsapp/qa-driver-api.js": [
+        "../dist/plugin-sdk/extensions/whatsapp/qa-driver-api.d.ts"
+      ],
       "@openclaw/llm-core": [
         "../dist/plugin-sdk/packages/llm-core/src/index.d.ts"
       ],
